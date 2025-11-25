@@ -382,41 +382,56 @@
             const fileInput = document.getElementById('fileInput');
             const selectBtn = document.getElementById('selectFilesBtn');
 
+            // Drag and drop handlers
             dropZone.addEventListener('dragover', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.add('border-blue-400', 'bg-blue-50');
             });
 
-            dropZone.addEventListener('dragleave', () => {
+            dropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.remove('border-blue-400', 'bg-blue-50');
             });
 
             dropZone.addEventListener('drop', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 dropZone.classList.remove('border-blue-400', 'bg-blue-50');
                 handleFiles(e.dataTransfer.files);
             });
 
-            // Handle click on the drop zone (but not on the button)
-            dropZone.addEventListener('click', (e) => {
-                // Only trigger file input if clicking directly on dropZone, not on the button
-                if (e.target === dropZone || e.target.tagName === 'I' || e.target.tagName === 'P') {
-                    fileInput.click();
-                }
-            });
-            
-            // Handle button click separately with stopPropagation
-            selectBtn.addEventListener('click', (e) => {
+            // Function to open file dialog
+            function openFileDialog(e) {
+                e.preventDefault();
                 e.stopPropagation();
                 fileInput.click();
+            }
+            
+            // Handle button click
+            selectBtn.addEventListener('click', openFileDialog);
+            
+            // Handle click on the drop zone text areas (not the button)
+            dropZone.addEventListener('click', (e) => {
+                // Don't trigger if clicking the button (it has its own handler)
+                if (e.target === selectBtn || selectBtn.contains(e.target)) {
+                    return;
+                }
+                openFileDialog(e);
             });
             
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length > 0) {
-                    handleFiles(e.target.files);
+            // Handle file selection - use a named function to avoid issues
+            fileInput.addEventListener('change', function handleFileSelect(e) {
+                const files = e.target.files;
+                if (files && files.length > 0) {
+                    // Create a copy of the FileList as an array
+                    const fileArray = Array.from(files);
+                    // Reset input BEFORE processing to avoid any state issues
+                    fileInput.value = '';
+                    // Process files
+                    handleFiles(fileArray);
                 }
-                // Reset file input so the same files can be selected again if needed
-                e.target.value = '';
             });
         }
 
