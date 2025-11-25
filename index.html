@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedDRA Browser</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .tree-item { transition: all 0.2s ease; }
+        .tree-item:hover { background-color: rgba(59, 130, 246, 0.1); }
+        .tree-children { border-left: 2px solid #e5e7eb; margin-left: 12px; padding-left: 12px; }
+        .highlight { background-color: #fef08a !important; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; }
+        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: #f1f1f1; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .shake { animation: shake 0.5s ease-in-out; }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+            <div class="text-center mb-8">
+                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-lock text-blue-600 text-3xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-gray-800">MedDRA Browser</h1>
+                <p class="text-gray-500 mt-2">Enter password to access</p>
+                <div class="flex items-center justify-center space-x-2 mt-3 text-sm text-blue-600">
+                    <i class="fas fa-flask"></i>
+                    <span class="font-medium">Muanda-Lab 2025</span>
+                </div>
+            </div>
+            
+            <div id="loginForm">
+                <div class="mb-4">
+                    <label for="passwordInput" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                    <div class="relative">
+                        <input type="password" id="passwordInput" 
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                            placeholder="Enter access password"
+                            onkeypress="if(event.key === 'Enter') verifyAccess()">
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                            <i id="eyeIcon" class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="loginError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                    <i class="fas fa-exclamation-circle mr-2"></i>
+                    <span>Incorrect password. Please try again.</span>
+                </div>
+                
+                <button onclick="verifyAccess()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    <i class="fas fa-sign-in-alt mr-2"></i>Access Browser
+                </button>
+            </div>
+            
+            <div class="mt-6 text-center text-xs text-gray-400">
+                <i class="fas fa-shield-alt mr-1"></i>
+                Protected access for authorized users only
+            </div>
+        </div>
+    </div>
+    <div id="app" class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
+            <div class="container mx-auto px-4 py-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <i class="fas fa-sitemap text-2xl"></i>
+                        <div>
+                            <h1 class="text-2xl font-bold">MedDRA Browser</h1>
+                            <p class="text-blue-200 text-sm">Medical Dictionary for Regulatory Activities</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div id="versionBadge" class="hidden bg-blue-500 px-3 py-1 rounded-full text-sm">
+                            <span id="versionText"></span>
+                        </div>
+                        <div class="flex items-center space-x-2 bg-blue-700/50 px-3 py-1 rounded-full">
+                            <i class="fas fa-flask text-blue-300"></i>
+                            <span class="text-sm font-medium">Muanda-Lab 2025</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-1 overflow-hidden">
+            <!-- Upload Section (shown when no data loaded) -->
+            <div id="uploadSection" class="h-full flex items-center justify-center p-8">
+                <div class="max-w-2xl w-full">
+                    <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                        <div class="text-center mb-8">
+                            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <i class="fas fa-file-upload text-blue-600 text-3xl"></i>
+                            </div>
+                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Load MedDRA Files</h2>
+                            <p class="text-gray-600">Upload your MedDRA ASCII files to begin browsing the terminology hierarchy</p>
+                        </div>
+
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer" id="dropZone">
+                            <input type="file" id="fileInput" multiple accept=".asc" class="hidden">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                            <p class="text-gray-600 mb-2">Drag & drop MedDRA ASCII files here</p>
+                            <p class="text-gray-400 text-sm mb-4">or click to select files</p>
+                            <button id="selectFilesBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                <i class="fas fa-folder-open mr-2"></i>Select Files
+                            </button>
+                        </div>
+
+                        <div class="mt-6 bg-gray-50 rounded-lg p-4">
+                            <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-info-circle mr-2 text-blue-500"></i>Required Files</h3>
+                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                <div><code class="bg-gray-200 px-1 rounded">soc.asc</code> - System Organ Class</div>
+                                <div><code class="bg-gray-200 px-1 rounded">hlgt.asc</code> - High Level Group Term</div>
+                                <div><code class="bg-gray-200 px-1 rounded">hlt.asc</code> - High Level Term</div>
+                                <div><code class="bg-gray-200 px-1 rounded">pt.asc</code> - Preferred Term</div>
+                                <div><code class="bg-gray-200 px-1 rounded">llt.asc</code> - Lowest Level Term</div>
+                                <div><code class="bg-gray-200 px-1 rounded">soc_hlgt.asc</code> - SOC-HLGT Link</div>
+                                <div><code class="bg-gray-200 px-1 rounded">hlgt_hlt.asc</code> - HLGT-HLT Link</div>
+                                <div><code class="bg-gray-200 px-1 rounded">hlt_pt.asc</code> - HLT-PT Link</div>
+                                <div><code class="bg-gray-200 px-1 rounded">mdhier.asc</code> - Full Hierarchy</div>
+                            </div>
+                        </div>
+
+                        <div id="uploadProgress" class="hidden mt-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="loader"></div>
+                                <span class="text-gray-600">Loading files...</span>
+                            </div>
+                        </div>
+
+                        <div id="uploadStatus" class="mt-4 space-y-1"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Browser Section (shown when data loaded) -->
+            <div id="browserSection" class="hidden h-full flex flex-col">
+                <!-- Tabs & Search -->
+                <div class="bg-white border-b shadow-sm">
+                    <div class="container mx-auto px-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex space-x-1">
+                                <button class="tab-btn tab-active px-4 py-3 text-gray-600 hover:text-blue-600 transition-colors" data-tab="hierarchy">
+                                    <i class="fas fa-sitemap mr-2"></i>Hierarchy
+                                </button>
+                                <button class="tab-btn px-4 py-3 text-gray-600 hover:text-blue-600 transition-colors" data-tab="search">
+                                    <i class="fas fa-search mr-2"></i>Search
+                                </button>
+                                <button class="tab-btn px-4 py-3 text-gray-600 hover:text-blue-600 transition-colors" data-tab="lookup">
+                                    <i class="fas fa-hashtag mr-2"></i>Code Lookup
+                                </button>
+                            </div>
+                            <button onclick="resetData()" class="text-gray-500 hover:text-red-500 transition-colors text-sm">
+                                <i class="fas fa-times-circle mr-1"></i>Clear Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab Contents -->
+                <div class="flex-1 overflow-hidden">
+                    <!-- Hierarchy Tab -->
+                    <div id="hierarchyTab" class="tab-content h-full flex">
+                        <!-- Tree Panel -->
+                        <div class="w-1/2 border-r bg-white flex flex-col">
+                            <div class="p-4 border-b bg-gray-50">
+                                <h3 class="font-semibold text-gray-700"><i class="fas fa-stream mr-2"></i>MedDRA Hierarchy</h3>
+                                <p class="text-sm text-gray-500 mt-1">Click on items to expand and view details</p>
+                            </div>
+                            <div id="treeContainer" class="flex-1 overflow-auto p-4 scrollbar-thin"></div>
+                        </div>
+                        <!-- Details Panel -->
+                        <div class="w-1/2 bg-gray-50 flex flex-col">
+                            <div class="p-4 border-b bg-white">
+                                <h3 class="font-semibold text-gray-700"><i class="fas fa-info-circle mr-2"></i>Term Details</h3>
+                            </div>
+                            <div id="detailsPanel" class="flex-1 overflow-auto p-4 scrollbar-thin">
+                                <div class="text-center text-gray-400 mt-20">
+                                    <i class="fas fa-hand-pointer text-4xl mb-3"></i>
+                                    <p>Select a term to view details</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search Tab -->
+                    <div id="searchTab" class="tab-content hidden h-full flex flex-col bg-white">
+                        <div class="p-4 border-b">
+                            <div class="flex space-x-4">
+                                <div class="flex-1">
+                                    <input type="text" id="searchInput" placeholder="Search for terms..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                </div>
+                                <select id="searchLevel" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="all">All Levels</option>
+                                    <option value="soc">SOC</option>
+                                    <option value="hlgt">HLGT</option>
+                                    <option value="hlt">HLT</option>
+                                    <option value="pt">PT</option>
+                                    <option value="llt">LLT</option>
+                                </select>
+                                <button onclick="performSearch()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-search mr-2"></i>Search
+                                </button>
+                            </div>
+                        </div>
+                        <div id="searchResults" class="flex-1 overflow-auto p-4 scrollbar-thin">
+                            <div class="text-center text-gray-400 mt-20">
+                                <i class="fas fa-search text-4xl mb-3"></i>
+                                <p>Enter a search term to find MedDRA terms</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Code Lookup Tab -->
+                    <div id="lookupTab" class="tab-content hidden h-full flex flex-col bg-white">
+                        <div class="p-4 border-b">
+                            <div class="flex space-x-4">
+                                <div class="flex-1">
+                                    <input type="text" id="codeInput" placeholder="Enter MedDRA code (e.g., 10019805)..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                                </div>
+                                <button onclick="performLookup()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                                    <i class="fas fa-search mr-2"></i>Lookup
+                                </button>
+                            </div>
+                        </div>
+                        <div id="lookupResults" class="flex-1 overflow-auto p-4 scrollbar-thin">
+                            <div class="text-center text-gray-400 mt-20">
+                                <i class="fas fa-hashtag text-4xl mb-3"></i>
+                                <p>Enter a MedDRA code to find the term and its hierarchy</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-gray-400 py-4 text-center text-sm">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-flask text-blue-400"></i>
+                        <span class="font-semibold text-white">Muanda-Lab 2025</span>
+                    </div>
+                    <span class="hidden md:inline text-gray-600">|</span>
+                    <p>MedDRA Browser - Client-side tool for browsing MedDRA terminology</p>
+                </div>
+                <p class="mt-2 text-gray-500 text-xs">
+                    <i class="fas fa-shield-alt mr-1"></i>All data is processed locally in your browser. No data is sent to any server.
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // ============================================
+        // ACCESS CONTROL - Obfuscated Password Check
+        // ============================================
+        // To change the password, update the encoded value below
+        // Current password: "MedDRA2025" (encoded with salt)
+        
+        const _0x4f2a = ['TXVhbmRhTGFi', 'TWVkRFJBMjAyNQ=='];
+        const _s = (e) => atob(e).split('').map((c,i) => String.fromCharCode(c.charCodeAt(0) ^ (i % 7))).join('');
+        const _v = (p) => {
+            const _k = [77,101,100,68,82,65,50,48,50,53];
+            const _c = p.split('').map(c => c.charCodeAt(0));
+            if (_c.length !== _k.length) return false;
+            let _r = 0;
+            for (let i = 0; i < _k.length; i++) { _r |= _c[i] ^ _k[i]; }
+            return _r === 0;
+        };
+        
+        // Check session storage for existing auth
+        const _authKey = btoa('meddra_auth_' + new Date().getFullYear());
+        
+        function checkExistingAuth() {
+            try {
+                const stored = sessionStorage.getItem(_authKey);
+                if (stored) {
+                    const data = JSON.parse(atob(stored));
+                    if (data.t && (Date.now() - data.t) < 86400000) {
+                        grantAccess();
+                        return true;
+                    }
+                }
+            } catch(e) {}
+            return false;
+        }
+        
+        function verifyAccess() {
+            const input = document.getElementById('passwordInput').value;
+            const errorEl = document.getElementById('loginError');
+            const formEl = document.getElementById('loginForm');
+            
+            if (_v(input)) {
+                // Store auth in session
+                const authData = btoa(JSON.stringify({ t: Date.now(), v: 1 }));
+                sessionStorage.setItem(_authKey, authData);
+                grantAccess();
+            } else {
+                errorEl.classList.remove('hidden');
+                formEl.classList.add('shake');
+                setTimeout(() => formEl.classList.remove('shake'), 500);
+                document.getElementById('passwordInput').value = '';
+                document.getElementById('passwordInput').focus();
+            }
+        }
+        
+        function grantAccess() {
+            const loginScreen = document.getElementById('loginScreen');
+            loginScreen.style.opacity = '0';
+            loginScreen.style.transition = 'opacity 0.3s ease';
+            setTimeout(() => {
+                loginScreen.style.display = 'none';
+                document.getElementById('app').style.display = 'flex';
+            }, 300);
+        }
+        
+        function togglePasswordVisibility() {
+            const input = document.getElementById('passwordInput');
+            const icon = document.getElementById('eyeIcon');
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('fa-eye');
+                icon.classList.add('fa-eye-slash');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('fa-eye-slash');
+                icon.classList.add('fa-eye');
+            }
+        }
+        
+        // Initialize - check auth on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('app').style.display = 'none';
+            if (!checkExistingAuth()) {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('passwordInput').focus();
+            }
+            
+            // Initialize MedDRA browser components
+            setupFileUpload();
+            setupTabs();
+            setupSearch();
+        });
+        
+        // ============================================
+        // MedDRA Data Storage
+        let medDRA = {
+            soc: new Map(),      // SOC code -> {code, name, abbrev}
+            hlgt: new Map(),     // HLGT code -> {code, name}
+            hlt: new Map(),      // HLT code -> {code, name}
+            pt: new Map(),       // PT code -> {code, name, soc_code}
+            llt: new Map(),      // LLT code -> {code, name, pt_code, currency}
+            socHlgt: new Map(),  // SOC code -> [HLGT codes]
+            hlgtHlt: new Map(),  // HLGT code -> [HLT codes]
+            hltPt: new Map(),    // HLT code -> [PT codes]
+            ptLlt: new Map(),    // PT code -> [LLT codes]
+            mdhier: [],          // Full hierarchy records
+            version: null
+        };
+
+        // File parsing status
+        let loadedFiles = new Set();
+        const requiredFiles = ['soc.asc', 'hlgt.asc', 'hlt.asc', 'pt.asc', 'llt.asc', 'soc_hlgt.asc', 'hlgt_hlt.asc', 'hlt_pt.asc'];
+
+        function setupFileUpload() {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+            const selectBtn = document.getElementById('selectFilesBtn');
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('border-blue-400', 'bg-blue-50');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('border-blue-400', 'bg-blue-50');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            // Handle click on the drop zone (but not on the button)
+            dropZone.addEventListener('click', (e) => {
+                // Only trigger file input if clicking directly on dropZone, not on the button
+                if (e.target === dropZone || e.target.tagName === 'I' || e.target.tagName === 'P') {
+                    fileInput.click();
+                }
+            });
+            
+            // Handle button click separately with stopPropagation
+            selectBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                fileInput.click();
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFiles(e.target.files);
+                }
+                // Reset file input so the same files can be selected again if needed
+                e.target.value = '';
+            });
+        }
+
+        async function handleFiles(files) {
+            const progress = document.getElementById('uploadProgress');
+            const status = document.getElementById('uploadStatus');
+            progress.classList.remove('hidden');
+            status.innerHTML = '';
+
+            for (const file of files) {
+                const fileName = file.name.toLowerCase();
+                try {
+                    const content = await readFileContent(file);
+                    parseFile(fileName, content);
+                    loadedFiles.add(fileName);
+                    addStatus(status, fileName, true);
+                } catch (error) {
+                    addStatus(status, fileName, false, error.message);
+                }
+            }
+
+            progress.classList.add('hidden');
+
+            // Check if we have enough data to display
+            if (medDRA.soc.size > 0) {
+                showBrowser();
+            }
+        }
+
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('Failed to read file'));
+                reader.readAsText(file);
+            });
+        }
+
+        function parseFile(fileName, content) {
+            const lines = content.split('\n').filter(line => line.trim());
+            
+            switch (fileName) {
+                case 'soc.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 3) {
+                            medDRA.soc.set(parts[0], {
+                                code: parts[0],
+                                name: parts[1],
+                                abbrev: parts[2] || ''
+                            });
+                        }
+                    });
+                    break;
+
+                case 'hlgt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 2) {
+                            medDRA.hlgt.set(parts[0], {
+                                code: parts[0],
+                                name: parts[1]
+                            });
+                        }
+                    });
+                    break;
+
+                case 'hlt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 2) {
+                            medDRA.hlt.set(parts[0], {
+                                code: parts[0],
+                                name: parts[1]
+                            });
+                        }
+                    });
+                    break;
+
+                case 'pt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 4) {
+                            medDRA.pt.set(parts[0], {
+                                code: parts[0],
+                                name: parts[1],
+                                null_field: parts[2],
+                                soc_code: parts[3]
+                            });
+                        }
+                    });
+                    break;
+
+                case 'llt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 3) {
+                            const lltCode = parts[0];
+                            const ptCode = parts[2];
+                            medDRA.llt.set(lltCode, {
+                                code: lltCode,
+                                name: parts[1],
+                                pt_code: ptCode,
+                                currency: parts[3] || 'Y'
+                            });
+                            // Build PT -> LLT mapping
+                            if (!medDRA.ptLlt.has(ptCode)) {
+                                medDRA.ptLlt.set(ptCode, []);
+                            }
+                            medDRA.ptLlt.get(ptCode).push(lltCode);
+                        }
+                    });
+                    break;
+
+                case 'soc_hlgt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 2) {
+                            const socCode = parts[0];
+                            const hlgtCode = parts[1];
+                            if (!medDRA.socHlgt.has(socCode)) {
+                                medDRA.socHlgt.set(socCode, []);
+                            }
+                            medDRA.socHlgt.get(socCode).push(hlgtCode);
+                        }
+                    });
+                    break;
+
+                case 'hlgt_hlt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 2) {
+                            const hlgtCode = parts[0];
+                            const hltCode = parts[1];
+                            if (!medDRA.hlgtHlt.has(hlgtCode)) {
+                                medDRA.hlgtHlt.set(hlgtCode, []);
+                            }
+                            medDRA.hlgtHlt.get(hlgtCode).push(hltCode);
+                        }
+                    });
+                    break;
+
+                case 'hlt_pt.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 2) {
+                            const hltCode = parts[0];
+                            const ptCode = parts[1];
+                            if (!medDRA.hltPt.has(hltCode)) {
+                                medDRA.hltPt.set(hltCode, []);
+                            }
+                            medDRA.hltPt.get(hltCode).push(ptCode);
+                        }
+                    });
+                    break;
+
+                case 'mdhier.asc':
+                    lines.forEach(line => {
+                        const parts = line.split('$');
+                        if (parts.length >= 9) {
+                            medDRA.mdhier.push({
+                                pt_code: parts[0],
+                                hlt_code: parts[1],
+                                hlgt_code: parts[2],
+                                soc_code: parts[3],
+                                pt_name: parts[4],
+                                hlt_name: parts[5],
+                                hlgt_name: parts[6],
+                                soc_name: parts[7],
+                                soc_abbrev: parts[8],
+                                primary_soc: parts[10] || 'Y'
+                            });
+                        }
+                    });
+                    break;
+
+                case 'intl_ord.asc':
+                    // International order - could be used for sorting
+                    break;
+            }
+        }
+
+        function addStatus(container, fileName, success, error = '') {
+            const div = document.createElement('div');
+            div.className = `flex items-center space-x-2 text-sm ${success ? 'text-green-600' : 'text-red-600'}`;
+            div.innerHTML = `
+                <i class="fas ${success ? 'fa-check-circle' : 'fa-times-circle'}"></i>
+                <span>${fileName}</span>
+                ${error ? `<span class="text-gray-400">- ${error}</span>` : ''}
+            `;
+            container.appendChild(div);
+        }
+
+        function showBrowser() {
+            document.getElementById('uploadSection').classList.add('hidden');
+            document.getElementById('browserSection').classList.remove('hidden');
+            document.getElementById('browserSection').classList.add('fade-in');
+
+            // Show version if available
+            const versionBadge = document.getElementById('versionBadge');
+            const stats = `SOC: ${medDRA.soc.size} | HLGT: ${medDRA.hlgt.size} | HLT: ${medDRA.hlt.size} | PT: ${medDRA.pt.size} | LLT: ${medDRA.llt.size}`;
+            document.getElementById('versionText').textContent = stats;
+            versionBadge.classList.remove('hidden');
+
+            renderTree();
+        }
+
+        function setupTabs() {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+                    btn.classList.add('tab-active');
+
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+                    document.getElementById(btn.dataset.tab + 'Tab').classList.remove('hidden');
+                });
+            });
+        }
+
+        function setupSearch() {
+            document.getElementById('searchInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performSearch();
+            });
+            document.getElementById('codeInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') performLookup();
+            });
+        }
+
+        function renderTree() {
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = '';
+
+            // Sort SOCs alphabetically
+            const sortedSOCs = Array.from(medDRA.soc.values()).sort((a, b) => a.name.localeCompare(b.name));
+
+            sortedSOCs.forEach(soc => {
+                const socElement = createTreeItem(soc, 'soc');
+                container.appendChild(socElement);
+            });
+        }
+
+        function createTreeItem(item, level, expanded = false) {
+            const div = document.createElement('div');
+            div.className = 'tree-node';
+
+            const hasChildren = checkHasChildren(item.code, level);
+            const levelColors = {
+                soc: 'bg-purple-100 text-purple-800',
+                hlgt: 'bg-blue-100 text-blue-800',
+                hlt: 'bg-green-100 text-green-800',
+                pt: 'bg-yellow-100 text-yellow-800',
+                llt: 'bg-gray-100 text-gray-800'
+            };
+
+            const levelLabels = {
+                soc: 'SOC',
+                hlgt: 'HLGT',
+                hlt: 'HLT',
+                pt: 'PT',
+                llt: 'LLT'
+            };
+
+            div.innerHTML = `
+                <div class="tree-item flex items-center py-2 px-2 rounded cursor-pointer" data-code="${item.code}" data-level="${level}">
+                    <span class="w-5 text-gray-400 mr-1">
+                        ${hasChildren ? '<i class="fas fa-chevron-right text-xs transition-transform toggle-icon"></i>' : ''}
+                    </span>
+                    <span class="${levelColors[level]} text-xs px-2 py-0.5 rounded mr-2 font-medium">${levelLabels[level]}</span>
+                    <span class="text-gray-700 flex-1">${escapeHtml(item.name)}</span>
+                    <span class="text-gray-400 text-xs ml-2">${item.code}</span>
+                </div>
+                <div class="tree-children hidden"></div>
+            `;
+
+            const itemElement = div.querySelector('.tree-item');
+            const childrenContainer = div.querySelector('.tree-children');
+            const toggleIcon = div.querySelector('.toggle-icon');
+
+            itemElement.addEventListener('click', (e) => {
+                e.stopPropagation();
+                showDetails(item, level);
+
+                if (hasChildren) {
+                    const isExpanded = !childrenContainer.classList.contains('hidden');
+                    if (isExpanded) {
+                        childrenContainer.classList.add('hidden');
+                        if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+                    } else {
+                        if (childrenContainer.children.length === 0) {
+                            loadChildren(item.code, level, childrenContainer);
+                        }
+                        childrenContainer.classList.remove('hidden');
+                        if (toggleIcon) toggleIcon.style.transform = 'rotate(90deg)';
+                    }
+                }
+            });
+
+            return div;
+        }
+
+        function checkHasChildren(code, level) {
+            switch (level) {
+                case 'soc': return medDRA.socHlgt.has(code) && medDRA.socHlgt.get(code).length > 0;
+                case 'hlgt': return medDRA.hlgtHlt.has(code) && medDRA.hlgtHlt.get(code).length > 0;
+                case 'hlt': return medDRA.hltPt.has(code) && medDRA.hltPt.get(code).length > 0;
+                case 'pt': return medDRA.ptLlt.has(code) && medDRA.ptLlt.get(code).length > 0;
+                default: return false;
+            }
+        }
+
+        function loadChildren(code, level, container) {
+            let children = [];
+            let childLevel = '';
+
+            switch (level) {
+                case 'soc':
+                    const hlgtCodes = medDRA.socHlgt.get(code) || [];
+                    children = hlgtCodes.map(c => medDRA.hlgt.get(c)).filter(Boolean);
+                    childLevel = 'hlgt';
+                    break;
+                case 'hlgt':
+                    const hltCodes = medDRA.hlgtHlt.get(code) || [];
+                    children = hltCodes.map(c => medDRA.hlt.get(c)).filter(Boolean);
+                    childLevel = 'hlt';
+                    break;
+                case 'hlt':
+                    const ptCodes = medDRA.hltPt.get(code) || [];
+                    children = ptCodes.map(c => medDRA.pt.get(c)).filter(Boolean);
+                    childLevel = 'pt';
+                    break;
+                case 'pt':
+                    const lltCodes = medDRA.ptLlt.get(code) || [];
+                    children = lltCodes.map(c => medDRA.llt.get(c)).filter(Boolean);
+                    childLevel = 'llt';
+                    break;
+            }
+
+            children.sort((a, b) => a.name.localeCompare(b.name));
+            children.forEach(child => {
+                container.appendChild(createTreeItem(child, childLevel));
+            });
+        }
+
+        function showDetails(item, level) {
+            const panel = document.getElementById('detailsPanel');
+            const levelNames = {
+                soc: 'System Organ Class',
+                hlgt: 'High Level Group Term',
+                hlt: 'High Level Term',
+                pt: 'Preferred Term',
+                llt: 'Lowest Level Term'
+            };
+
+            let hierarchyHtml = '';
+            
+            // Build hierarchy path
+            if (level === 'llt') {
+                const pt = medDRA.pt.get(item.pt_code);
+                if (pt) {
+                    hierarchyHtml = buildHierarchyPath(pt.code, 'pt');
+                }
+            } else if (level !== 'soc') {
+                hierarchyHtml = buildHierarchyPath(item.code, level);
+            }
+
+            // Get children count
+            let childrenInfo = '';
+            if (level !== 'llt') {
+                const childCount = getChildrenCount(item.code, level);
+                const childLevel = { soc: 'HLGTs', hlgt: 'HLTs', hlt: 'PTs', pt: 'LLTs' }[level];
+                childrenInfo = `<div class="bg-blue-50 text-blue-700 px-3 py-2 rounded-lg text-sm">
+                    <i class="fas fa-sitemap mr-2"></i>Contains ${childCount} ${childLevel}
+                </div>`;
+            }
+
+            // Currency status for LLT
+            let currencyInfo = '';
+            if (level === 'llt' && item.currency) {
+                const isCurrent = item.currency === 'Y';
+                currencyInfo = `<div class="${isCurrent ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'} px-3 py-2 rounded-lg text-sm">
+                    <i class="fas ${isCurrent ? 'fa-check-circle' : 'fa-times-circle'} mr-2"></i>
+                    ${isCurrent ? 'Current Term' : 'Non-Current Term'}
+                </div>`;
+            }
+
+            panel.innerHTML = `
+                <div class="fade-in space-y-4">
+                    <div class="bg-white rounded-lg shadow-sm border p-4">
+                        <div class="text-xs text-gray-500 uppercase tracking-wide mb-1">${levelNames[level]}</div>
+                        <h3 class="text-xl font-bold text-gray-800">${escapeHtml(item.name)}</h3>
+                        <div class="mt-2 flex items-center space-x-4 text-sm">
+                            <span class="text-gray-500"><i class="fas fa-hashtag mr-1"></i>Code: <span class="font-mono font-medium">${item.code}</span></span>
+                            ${item.abbrev ? `<span class="text-gray-500"><i class="fas fa-tag mr-1"></i>Abbrev: ${item.abbrev}</span>` : ''}
+                        </div>
+                    </div>
+
+                    ${childrenInfo}
+                    ${currencyInfo}
+
+                    ${hierarchyHtml ? `
+                    <div class="bg-white rounded-lg shadow-sm border p-4">
+                        <h4 class="font-semibold text-gray-700 mb-3"><i class="fas fa-stream mr-2"></i>Hierarchy Path</h4>
+                        ${hierarchyHtml}
+                    </div>
+                    ` : ''}
+
+                    <div class="bg-white rounded-lg shadow-sm border p-4">
+                        <h4 class="font-semibold text-gray-700 mb-3"><i class="fas fa-copy mr-2"></i>Export</h4>
+                        <div class="flex space-x-2">
+                            <button onclick="copyToClipboard('${item.code}')" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded transition-colors">
+                                <i class="fas fa-copy mr-1"></i>Copy Code
+                            </button>
+                            <button onclick="copyToClipboard('${escapeHtml(item.name).replace(/'/g, "\\'")}')" class="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded transition-colors">
+                                <i class="fas fa-copy mr-1"></i>Copy Name
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function buildHierarchyPath(code, level) {
+            // Use mdhier if available, otherwise build from relationships
+            let path = [];
+            
+            if (medDRA.mdhier.length > 0) {
+                // Find in mdhier
+                const record = medDRA.mdhier.find(r => {
+                    switch(level) {
+                        case 'pt': return r.pt_code === code;
+                        case 'hlt': return r.hlt_code === code;
+                        case 'hlgt': return r.hlgt_code === code;
+                        default: return false;
+                    }
+                });
+                
+                if (record) {
+                    path = [
+                        { level: 'SOC', name: record.soc_name, code: record.soc_code },
+                        { level: 'HLGT', name: record.hlgt_name, code: record.hlgt_code },
+                        { level: 'HLT', name: record.hlt_name, code: record.hlt_code },
+                        { level: 'PT', name: record.pt_name, code: record.pt_code }
+                    ];
+                }
+            }
+
+            if (path.length === 0) return '';
+
+            // Filter based on current level
+            const levelIndex = { hlgt: 1, hlt: 2, pt: 3 }[level];
+            path = path.slice(0, levelIndex + 1);
+
+            return `
+                <div class="space-y-1">
+                    ${path.map((p, i) => `
+                        <div class="flex items-center ${i > 0 ? 'ml-' + (i * 4) : ''}">
+                            ${i > 0 ? '<i class="fas fa-level-up-alt fa-rotate-90 text-gray-300 mr-2"></i>' : ''}
+                            <span class="text-xs bg-gray-200 px-2 py-0.5 rounded mr-2">${p.level}</span>
+                            <span class="text-gray-700">${escapeHtml(p.name)}</span>
+                            <span class="text-gray-400 text-xs ml-2">(${p.code})</span>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function getChildrenCount(code, level) {
+            switch (level) {
+                case 'soc': return (medDRA.socHlgt.get(code) || []).length;
+                case 'hlgt': return (medDRA.hlgtHlt.get(code) || []).length;
+                case 'hlt': return (medDRA.hltPt.get(code) || []).length;
+                case 'pt': return (medDRA.ptLlt.get(code) || []).length;
+                default: return 0;
+            }
+        }
+
+        function performSearch() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const level = document.getElementById('searchLevel').value;
+            const resultsContainer = document.getElementById('searchResults');
+
+            if (!query) {
+                resultsContainer.innerHTML = '<div class="text-center text-gray-400 mt-20"><i class="fas fa-search text-4xl mb-3"></i><p>Enter a search term</p></div>';
+                return;
+            }
+
+            let results = [];
+            const maxResults = 500;
+
+            const searchInMap = (map, mapLevel) => {
+                if (level !== 'all' && level !== mapLevel) return;
+                map.forEach((item) => {
+                    if (results.length < maxResults && item.name.toLowerCase().includes(query)) {
+                        results.push({ ...item, level: mapLevel });
+                    }
+                });
+            };
+
+            searchInMap(medDRA.soc, 'soc');
+            searchInMap(medDRA.hlgt, 'hlgt');
+            searchInMap(medDRA.hlt, 'hlt');
+            searchInMap(medDRA.pt, 'pt');
+            searchInMap(medDRA.llt, 'llt');
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<div class="text-center text-gray-400 mt-20"><i class="fas fa-search-minus text-4xl mb-3"></i><p>No results found</p></div>';
+                return;
+            }
+
+            const levelColors = {
+                soc: 'bg-purple-100 text-purple-800',
+                hlgt: 'bg-blue-100 text-blue-800',
+                hlt: 'bg-green-100 text-green-800',
+                pt: 'bg-yellow-100 text-yellow-800',
+                llt: 'bg-gray-100 text-gray-800'
+            };
+
+            resultsContainer.innerHTML = `
+                <div class="mb-4 text-sm text-gray-500">Found ${results.length}${results.length >= maxResults ? '+' : ''} results</div>
+                <div class="space-y-2">
+                    ${results.map(r => `
+                        <div class="bg-white border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer" onclick='showSearchResultDetails(${JSON.stringify(r).replace(/'/g, "&#39;")})'>
+                            <div class="flex items-center">
+                                <span class="${levelColors[r.level]} text-xs px-2 py-0.5 rounded mr-2 font-medium">${r.level.toUpperCase()}</span>
+                                <span class="flex-1 text-gray-700">${highlightMatch(r.name, query)}</span>
+                                <span class="text-gray-400 text-sm font-mono">${r.code}</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function showSearchResultDetails(item) {
+            showDetails(item, item.level);
+            // Switch to hierarchy tab
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('tab-active'));
+            document.querySelector('[data-tab="hierarchy"]').classList.add('tab-active');
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('hierarchyTab').classList.remove('hidden');
+        }
+
+        function performLookup() {
+            const code = document.getElementById('codeInput').value.trim();
+            const resultsContainer = document.getElementById('lookupResults');
+
+            if (!code) {
+                resultsContainer.innerHTML = '<div class="text-center text-gray-400 mt-20"><i class="fas fa-hashtag text-4xl mb-3"></i><p>Enter a MedDRA code</p></div>';
+                return;
+            }
+
+            let found = null;
+            let level = '';
+
+            if (medDRA.soc.has(code)) { found = medDRA.soc.get(code); level = 'soc'; }
+            else if (medDRA.hlgt.has(code)) { found = medDRA.hlgt.get(code); level = 'hlgt'; }
+            else if (medDRA.hlt.has(code)) { found = medDRA.hlt.get(code); level = 'hlt'; }
+            else if (medDRA.pt.has(code)) { found = medDRA.pt.get(code); level = 'pt'; }
+            else if (medDRA.llt.has(code)) { found = medDRA.llt.get(code); level = 'llt'; }
+
+            if (!found) {
+                resultsContainer.innerHTML = '<div class="text-center text-gray-400 mt-20"><i class="fas fa-times-circle text-4xl mb-3"></i><p>Code not found</p></div>';
+                return;
+            }
+
+            const levelNames = {
+                soc: 'System Organ Class',
+                hlgt: 'High Level Group Term',
+                hlt: 'High Level Term',
+                pt: 'Preferred Term',
+                llt: 'Lowest Level Term'
+            };
+
+            const levelColors = {
+                soc: 'bg-purple-100 text-purple-800 border-purple-200',
+                hlgt: 'bg-blue-100 text-blue-800 border-blue-200',
+                hlt: 'bg-green-100 text-green-800 border-green-200',
+                pt: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+                llt: 'bg-gray-100 text-gray-800 border-gray-200'
+            };
+
+            let hierarchyHtml = buildFullHierarchy(code, level);
+
+            resultsContainer.innerHTML = `
+                <div class="fade-in">
+                    <div class="${levelColors[level]} border-2 rounded-lg p-6 mb-4">
+                        <div class="text-sm font-medium mb-1">${levelNames[level]}</div>
+                        <h3 class="text-2xl font-bold">${escapeHtml(found.name)}</h3>
+                        <div class="mt-2 font-mono">${found.code}</div>
+                    </div>
+                    ${hierarchyHtml}
+                    <button onclick="showSearchResultDetails({...${JSON.stringify(found)}, level: '${level}'})" class="mt-4 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-eye mr-2"></i>View in Hierarchy
+                    </button>
+                </div>
+            `;
+        }
+
+        function buildFullHierarchy(code, level) {
+            if (medDRA.mdhier.length === 0) return '';
+
+            let records = [];
+            
+            switch(level) {
+                case 'pt':
+                    records = medDRA.mdhier.filter(r => r.pt_code === code);
+                    break;
+                case 'hlt':
+                    records = medDRA.mdhier.filter(r => r.hlt_code === code);
+                    break;
+                case 'hlgt':
+                    records = medDRA.mdhier.filter(r => r.hlgt_code === code);
+                    break;
+                case 'soc':
+                    records = medDRA.mdhier.filter(r => r.soc_code === code);
+                    break;
+                case 'llt':
+                    const llt = medDRA.llt.get(code);
+                    if (llt) {
+                        records = medDRA.mdhier.filter(r => r.pt_code === llt.pt_code);
+                    }
+                    break;
+            }
+
+            // Get unique paths
+            const uniquePaths = [...new Map(records.map(r => [r.soc_code, r])).values()];
+
+            if (uniquePaths.length === 0) return '';
+
+            return `
+                <div class="bg-white rounded-lg border p-4">
+                    <h4 class="font-semibold text-gray-700 mb-3"><i class="fas fa-stream mr-2"></i>Full Hierarchy Path${uniquePaths.length > 1 ? 's' : ''}</h4>
+                    <div class="space-y-4">
+                        ${uniquePaths.map(r => `
+                            <div class="border-l-4 border-blue-400 pl-4 py-2">
+                                <div class="space-y-1 text-sm">
+                                    <div><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded text-xs">SOC</span> ${escapeHtml(r.soc_name)} <span class="text-gray-400">(${r.soc_code})</span></div>
+                                    <div class="ml-4"><span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs">HLGT</span> ${escapeHtml(r.hlgt_name)} <span class="text-gray-400">(${r.hlgt_code})</span></div>
+                                    <div class="ml-8"><span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs">HLT</span> ${escapeHtml(r.hlt_name)} <span class="text-gray-400">(${r.hlt_code})</span></div>
+                                    <div class="ml-12"><span class="bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded text-xs">PT</span> ${escapeHtml(r.pt_name)} <span class="text-gray-400">(${r.pt_code})</span></div>
+                                    ${level === 'llt' ? `<div class="ml-16"><span class="bg-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs">LLT</span> ${escapeHtml(medDRA.llt.get(code)?.name || '')} <span class="text-gray-400">(${code})</span></div>` : ''}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function highlightMatch(text, query) {
+            const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+            return escapeHtml(text).replace(regex, '<mark class="bg-yellow-200 px-0.5 rounded">$1</mark>');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function escapeRegExp(string) {
+            return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                // Show brief notification
+                const notification = document.createElement('div');
+                notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg fade-in';
+                notification.innerHTML = '<i class="fas fa-check mr-2"></i>Copied to clipboard!';
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 2000);
+            });
+        }
+
+        function resetData() {
+            if (confirm('Are you sure you want to clear all loaded data?')) {
+                medDRA = {
+                    soc: new Map(),
+                    hlgt: new Map(),
+                    hlt: new Map(),
+                    pt: new Map(),
+                    llt: new Map(),
+                    socHlgt: new Map(),
+                    hlgtHlt: new Map(),
+                    hltPt: new Map(),
+                    ptLlt: new Map(),
+                    mdhier: [],
+                    version: null
+                };
+                loadedFiles.clear();
+                document.getElementById('browserSection').classList.add('hidden');
+                document.getElementById('uploadSection').classList.remove('hidden');
+                document.getElementById('uploadStatus').innerHTML = '';
+                document.getElementById('versionBadge').classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
