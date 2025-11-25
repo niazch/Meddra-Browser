@@ -3,91 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MedDRA Browser</title>
+    <title>MedDRA Browser | Muanda-Lab</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        .tree-item { transition: all 0.2s ease; }
-        .tree-item:hover { background-color: rgba(59, 130, 246, 0.1); }
-        .tree-children { border-left: 2px solid #e5e7eb; margin-left: 12px; padding-left: 12px; }
-        .highlight { background-color: #fef08a !important; }
-        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 24px; height: 24px; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .tab-active { border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; }
-        .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-        .scrollbar-thin::-webkit-scrollbar-track { background: #f1f1f1; }
-        .scrollbar-thin::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
-        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
-        .fade-in { animation: fadeIn 0.3s ease-in; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .shake { animation: shake 0.5s ease-in-out; }
-        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-10px); } 75% { transform: translateX(10px); } }
+        * { font-family: 'Inter', sans-serif; }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ec 100%);
+            min-height: 100vh;
+        }
+        
+        /* Custom scrollbar */
+        .scrollbar-thin::-webkit-scrollbar { width: 8px; height: 8px; }
+        .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+        .scrollbar-thin::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #c7d2fe 0%, #a5b4fc 100%); border-radius: 10px; }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #a5b4fc 0%, #818cf8 100%); }
+        
+        /* Tree styles */
+        .tree-item { 
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); 
+            border-radius: 10px;
+            margin: 2px 0;
+        }
+        .tree-item:hover { 
+            background: linear-gradient(90deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+            transform: translateX(4px);
+        }
+        .tree-children { 
+            border-left: 2px solid #e0e7ff; 
+            margin-left: 14px; 
+            padding-left: 14px; 
+        }
+        
+        /* Tab styles */
+        .tab-btn {
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%);
+            border-radius: 3px 3px 0 0;
+            transition: all 0.3s ease;
+            transform: translateX(-50%);
+        }
+        .tab-btn:hover::after { width: 50%; }
+        .tab-active::after { width: 80% !important; }
+        .tab-active { color: #6366f1; font-weight: 600; }
+        
+        /* Animations */
+        .fade-in { animation: fadeIn 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .shake { animation: shake 0.5s cubic-bezier(0.36, 0.07, 0.19, 0.97); }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+        
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.3); }
+            50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.6); }
+        }
+        
+        .float {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Glass morphism */
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        
+        .glass-dark {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(20px);
+        }
+        
+        /* Card hover effect */
+        .card-hover {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 40px rgba(99, 102, 241, 0.15);
+        }
+        
+        /* Level badge styles */
+        .badge-soc { background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%); color: white; }
+        .badge-hlgt { background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%); color: white; }
+        .badge-hlt { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: white; }
+        .badge-pt { background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; }
+        .badge-llt { background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%); color: white; }
+        
+        /* Drop zone */
+        .drop-zone {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%);
+            border: 2px dashed #c7d2fe;
+            transition: all 0.3s ease;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: #818cf8;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
+        }
+        
+        /* File status card */
+        .file-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .file-card.loaded {
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-color: #34d399;
+        }
+        .file-card.loaded .file-icon { color: #10b981; }
+        .file-card.loaded .check-icon { color: #10b981; }
+        .file-card.loaded .file-name { color: #065f46; }
+        
+        /* Progress bar */
+        .progress-bar {
+            background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+            background-size: 200% 100%;
+            animation: shimmer 2s linear infinite;
+        }
+        @keyframes shimmer {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        
+        /* Button styles */
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Input focus */
+        .input-focus:focus {
+            border-color: #818cf8;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
     <!-- Login Screen -->
-    <div id="loginScreen" class="fixed inset-0 bg-gradient-to-br from-blue-600 via-blue-700 to-blue-900 flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md mx-4">
+    <div id="loginScreen" class="fixed inset-0 flex items-center justify-center z-50 overflow-hidden">
+        <!-- Animated Background -->
+        <div class="absolute inset-0 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800">
+            <div class="absolute inset-0 opacity-30">
+                <div class="absolute top-0 -left-4 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse"></div>
+                <div class="absolute top-0 -right-4 w-72 h-72 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse" style="animation-delay: 1s;"></div>
+                <div class="absolute -bottom-8 left-20 w-72 h-72 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl animate-pulse" style="animation-delay: 2s;"></div>
+            </div>
+        </div>
+        
+        <!-- Login Card -->
+        <div class="relative glass rounded-3xl shadow-2xl p-10 w-full max-w-md mx-4 card-hover">
             <div class="text-center mb-8">
-                <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-lock text-blue-600 text-3xl"></i>
+                <div class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg float">
+                    <i class="fas fa-dna text-white text-4xl"></i>
                 </div>
-                <h1 class="text-2xl font-bold text-gray-800">MedDRA Browser</h1>
-                <p class="text-gray-500 mt-2">Enter password to access</p>
-                <div class="flex items-center justify-center space-x-2 mt-3 text-sm text-blue-600">
-                    <i class="fas fa-flask"></i>
-                    <span class="font-medium">Muanda-Lab 2025</span>
+                <h1 class="text-3xl font-bold gradient-text mb-2">MedDRA Browser</h1>
+                <p class="text-gray-500">Medical Dictionary for Regulatory Activities</p>
+                <div class="flex items-center justify-center space-x-2 mt-4">
+                    <div class="h-px w-12 bg-gradient-to-r from-transparent to-indigo-300"></div>
+                    <div class="flex items-center space-x-2 text-sm text-indigo-600 font-medium">
+                        <i class="fas fa-flask"></i>
+                        <span>Muanda-Lab 2025</span>
+                    </div>
+                    <div class="h-px w-12 bg-gradient-to-l from-transparent to-indigo-300"></div>
                 </div>
             </div>
             
             <div id="loginForm">
-                <div class="mb-4">
-                    <label for="passwordInput" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div class="mb-6">
+                    <label for="passwordInput" class="block text-sm font-semibold text-gray-700 mb-2">
+                        <i class="fas fa-key mr-2 text-indigo-500"></i>Access Password
+                    </label>
                     <div class="relative">
                         <input type="password" id="passwordInput" 
-                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                            placeholder="Enter access password"
+                            class="w-full px-5 py-4 bg-white/50 border-2 border-indigo-100 rounded-xl focus:border-indigo-400 focus:bg-white outline-none transition-all text-gray-700 placeholder-gray-400"
+                            placeholder="Enter your password"
                             onkeypress="if(event.key === 'Enter') verifyAccess()">
-                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
-                            <i id="eyeIcon" class="fas fa-eye"></i>
+                        <button type="button" onclick="togglePasswordVisibility()" class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-indigo-600 transition-colors">
+                            <i id="eyeIcon" class="fas fa-eye text-lg"></i>
                         </button>
                     </div>
                 </div>
                 
-                <div id="loginError" class="hidden mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-                    <i class="fas fa-exclamation-circle mr-2"></i>
+                <div id="loginError" class="hidden mb-4 p-4 bg-red-50 border-2 border-red-200 rounded-xl text-red-600 text-sm flex items-center">
+                    <i class="fas fa-exclamation-circle mr-3 text-lg"></i>
                     <span>Incorrect password. Please try again.</span>
                 </div>
                 
-                <button onclick="verifyAccess()" class="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    <i class="fas fa-sign-in-alt mr-2"></i>Access Browser
+                <button onclick="verifyAccess()" class="w-full btn-primary text-white py-4 rounded-xl font-semibold text-lg shadow-lg">
+                    <i class="fas fa-unlock mr-2"></i>Access Browser
                 </button>
             </div>
             
-            <div class="mt-6 text-center text-xs text-gray-400">
-                <i class="fas fa-shield-alt mr-1"></i>
-                Protected access for authorized users only
+            <div class="mt-8 text-center">
+                <div class="inline-flex items-center space-x-2 text-xs text-gray-400 bg-gray-100/50 px-4 py-2 rounded-full">
+                    <i class="fas fa-shield-alt text-indigo-400"></i>
+                    <span>Secure access for authorized users</span>
+                </div>
             </div>
         </div>
     </div>
-    <div id="app" class="flex flex-col h-screen">
+    <div id="app" class="flex flex-col min-h-screen">
         <!-- Header -->
-        <header class="bg-gradient-to-r from-blue-600 to-blue-800 text-white shadow-lg">
-            <div class="container mx-auto px-4 py-4">
+        <header class="glass-dark text-white shadow-2xl border-b border-white/10 flex-shrink-0">
+            <div class="container mx-auto px-6 py-4">
                 <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-3">
-                        <i class="fas fa-sitemap text-2xl"></i>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                            <i class="fas fa-dna text-white text-xl"></i>
+                        </div>
                         <div>
-                            <h1 class="text-2xl font-bold">MedDRA Browser</h1>
-                            <p class="text-blue-200 text-sm">Medical Dictionary for Regulatory Activities</p>
+                            <h1 class="text-2xl font-bold tracking-tight">MedDRA Browser</h1>
+                            <p class="text-indigo-300 text-sm font-light">Medical Dictionary for Regulatory Activities</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-4">
-                        <div id="versionBadge" class="hidden bg-blue-500 px-3 py-1 rounded-full text-sm">
+                        <div id="versionBadge" class="hidden glass px-4 py-2 rounded-xl text-xs text-gray-700 font-medium">
+                            <i class="fas fa-database mr-2 text-indigo-500"></i>
                             <span id="versionText"></span>
                         </div>
-                        <div class="flex items-center space-x-2 bg-blue-700/50 px-3 py-1 rounded-full">
-                            <i class="fas fa-flask text-blue-300"></i>
+                        <div class="flex items-center space-x-2 bg-white/10 backdrop-blur px-4 py-2 rounded-xl border border-white/20">
+                            <i class="fas fa-flask text-indigo-300"></i>
                             <span class="text-sm font-medium">Muanda-Lab 2025</span>
                         </div>
                     </div>
@@ -96,25 +263,27 @@
         </header>
 
         <!-- Main Content -->
-        <main class="flex-1 overflow-hidden">
+        <main class="flex-1 overflow-auto">
             <!-- Upload Section (shown when no data loaded) -->
-            <div id="uploadSection" class="h-full flex items-center justify-center p-8">
-                <div class="max-w-2xl w-full">
-                    <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                        <div class="text-center mb-8">
-                            <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-file-upload text-blue-600 text-3xl"></i>
+            <div id="uploadSection" class="min-h-full flex items-center justify-center p-8 py-12">
+                <div class="max-w-3xl w-full">
+                    <div class="glass rounded-3xl shadow-2xl p-10 border border-white/50 card-hover">
+                        <div class="text-center mb-10">
+                            <div class="w-24 h-24 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+                                <i class="fas fa-folder-open text-white text-4xl"></i>
                             </div>
-                            <h2 class="text-2xl font-bold text-gray-800 mb-2">Load MedDRA Files</h2>
-                            <p class="text-gray-600">Upload your MedDRA ASCII files to begin browsing the terminology hierarchy</p>
+                            <h2 class="text-3xl font-bold gradient-text mb-3">Load MedDRA Files</h2>
+                            <p class="text-gray-500 max-w-md mx-auto">Upload your MedDRA ASCII files to begin browsing the terminology hierarchy</p>
                         </div>
 
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer group" id="dropZone">
+                        <div class="drop-zone rounded-2xl p-10 text-center cursor-pointer group" id="dropZone">
                             <input type="file" id="fileInput" multiple accept=".asc" class="hidden">
-                            <div class="transform group-hover:scale-110 transition-transform duration-300">
-                                <i class="fas fa-cloud-upload-alt text-5xl text-gray-400 group-hover:text-blue-500 mb-4 transition-colors"></i>
+                            <div class="transform group-hover:scale-110 transition-transform duration-500">
+                                <div class="w-20 h-20 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-6 group-hover:shadow-lg transition-shadow">
+                                    <i class="fas fa-cloud-upload-alt text-4xl text-indigo-400 group-hover:text-indigo-600 transition-colors"></i>
+                                </div>
                             </div>
-                            <p class="text-gray-700 font-medium mb-2">Drag & drop MedDRA ASCII files here</p>
+                            <p class="text-gray-700 font-semibold text-lg mb-2">Drag & drop MedDRA ASCII files here</p>
                             <p class="text-gray-400 text-sm">or click anywhere in this area to select files</p>
                         </div>
 
@@ -337,7 +506,7 @@
         </main>
 
         <!-- Footer -->
-        <footer class="bg-gray-800 text-gray-400 py-4 text-center text-sm">
+        <footer class="bg-gray-800 text-gray-400 py-4 text-center text-sm flex-shrink-0">
             <div class="container mx-auto px-4">
                 <div class="flex flex-col md:flex-row items-center justify-center space-y-2 md:space-y-0 md:space-x-4">
                     <div class="flex items-center space-x-2">
