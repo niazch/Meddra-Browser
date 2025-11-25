@@ -109,39 +109,128 @@
                             <p class="text-gray-600">Upload your MedDRA ASCII files to begin browsing the terminology hierarchy</p>
                         </div>
 
-                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer" id="dropZone">
+                        <div class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer group" id="dropZone">
                             <input type="file" id="fileInput" multiple accept=".asc" class="hidden">
-                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
-                            <p class="text-gray-600 mb-2">Drag & drop MedDRA ASCII files here</p>
-                            <p class="text-gray-400 text-sm mb-4">or click to select files</p>
-                            <button id="selectFilesBtn" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                                <i class="fas fa-folder-open mr-2"></i>Select Files
-                            </button>
+                            <div class="transform group-hover:scale-110 transition-transform duration-300">
+                                <i class="fas fa-cloud-upload-alt text-5xl text-gray-400 group-hover:text-blue-500 mb-4 transition-colors"></i>
+                            </div>
+                            <p class="text-gray-700 font-medium mb-2">Drag & drop MedDRA ASCII files here</p>
+                            <p class="text-gray-400 text-sm">or click anywhere in this area to select files</p>
                         </div>
 
+                        <!-- File Status Grid -->
                         <div class="mt-6 bg-gray-50 rounded-lg p-4">
-                            <h3 class="font-semibold text-gray-700 mb-2"><i class="fas fa-info-circle mr-2 text-blue-500"></i>Required Files</h3>
-                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
-                                <div><code class="bg-gray-200 px-1 rounded">soc.asc</code> - System Organ Class</div>
-                                <div><code class="bg-gray-200 px-1 rounded">hlgt.asc</code> - High Level Group Term</div>
-                                <div><code class="bg-gray-200 px-1 rounded">hlt.asc</code> - High Level Term</div>
-                                <div><code class="bg-gray-200 px-1 rounded">pt.asc</code> - Preferred Term</div>
-                                <div><code class="bg-gray-200 px-1 rounded">llt.asc</code> - Lowest Level Term</div>
-                                <div><code class="bg-gray-200 px-1 rounded">soc_hlgt.asc</code> - SOC-HLGT Link</div>
-                                <div><code class="bg-gray-200 px-1 rounded">hlgt_hlt.asc</code> - HLGT-HLT Link</div>
-                                <div><code class="bg-gray-200 px-1 rounded">hlt_pt.asc</code> - HLT-PT Link</div>
-                                <div><code class="bg-gray-200 px-1 rounded">mdhier.asc</code> - Full Hierarchy</div>
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-semibold text-gray-700"><i class="fas fa-files-medical mr-2 text-blue-500"></i>Required Files</h3>
+                                <span id="fileCountBadge" class="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-full">0 / 9 loaded</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-3" id="fileStatusGrid">
+                                <div class="file-status-item" data-file="soc.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">soc.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">System Organ Class</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="hlgt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">hlgt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">High Level Group Term</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="hlt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">hlt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">High Level Term</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="pt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">pt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">Preferred Term</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="llt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">llt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">Lowest Level Term</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="soc_hlgt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">soc_hlgt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">SOC-HLGT Link</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="hlgt_hlt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">hlgt_hlt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">HLGT-HLT Link</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="hlt_pt.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">hlt_pt.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">HLT-PT Link</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                                <div class="file-status-item" data-file="mdhier.asc">
+                                    <div class="flex items-center p-3 bg-white border-2 border-gray-200 rounded-lg transition-all duration-300">
+                                        <i class="fas fa-file-alt text-gray-300 mr-2 file-icon"></i>
+                                        <div class="flex-1 min-w-0">
+                                            <div class="font-mono text-sm font-medium text-gray-400 file-name">mdhier.asc</div>
+                                            <div class="text-xs text-gray-400 truncate">Full Hierarchy</div>
+                                        </div>
+                                        <i class="fas fa-check-circle text-gray-200 check-icon"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mt-4">
+                                <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                                    <div id="progressBar" class="bg-gradient-to-r from-blue-500 to-green-500 h-2 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Status Messages -->
+                            <div id="uploadMessage" class="mt-3 text-center text-sm text-gray-500">
+                                <i class="fas fa-info-circle mr-1"></i>Drop files above to begin loading
                             </div>
                         </div>
 
-                        <div id="uploadProgress" class="hidden mt-6">
-                            <div class="flex items-center space-x-3">
-                                <div class="loader"></div>
-                                <span class="text-gray-600">Loading files...</span>
-                            </div>
-                        </div>
-
-                        <div id="uploadStatus" class="mt-4 space-y-1"></div>
+                        <div id="uploadStatus" class="mt-4 space-y-1 hidden"></div>
                     </div>
                 </div>
             </div>
@@ -375,12 +464,12 @@
 
         // File parsing status
         let loadedFiles = new Set();
-        const requiredFiles = ['soc.asc', 'hlgt.asc', 'hlt.asc', 'pt.asc', 'llt.asc', 'soc_hlgt.asc', 'hlgt_hlt.asc', 'hlt_pt.asc'];
+        const requiredFiles = ['soc.asc', 'hlgt.asc', 'hlt.asc', 'pt.asc', 'llt.asc', 'soc_hlgt.asc', 'hlgt_hlt.asc', 'hlt_pt.asc', 'mdhier.asc'];
+        const totalRequiredFiles = 9;
 
         function setupFileUpload() {
             const dropZone = document.getElementById('dropZone');
             const fileInput = document.getElementById('fileInput');
-            const selectBtn = document.getElementById('selectFilesBtn');
 
             // Drag and drop handlers
             dropZone.addEventListener('dragover', (e) => {
@@ -399,64 +488,139 @@
                 e.preventDefault();
                 e.stopPropagation();
                 dropZone.classList.remove('border-blue-400', 'bg-blue-50');
-                handleFiles(e.dataTransfer.files);
+                const files = Array.from(e.dataTransfer.files);
+                handleFiles(files);
             });
 
-            // Function to open file dialog
-            function openFileDialog(e) {
-                e.preventDefault();
-                e.stopPropagation();
+            // Handle click on drop zone to open file dialog
+            dropZone.addEventListener('click', () => {
                 fileInput.click();
-            }
-            
-            // Handle button click
-            selectBtn.addEventListener('click', openFileDialog);
-            
-            // Handle click on the drop zone text areas (not the button)
-            dropZone.addEventListener('click', (e) => {
-                // Don't trigger if clicking the button (it has its own handler)
-                if (e.target === selectBtn || selectBtn.contains(e.target)) {
-                    return;
-                }
-                openFileDialog(e);
             });
             
-            // Handle file selection - use a named function to avoid issues
-            fileInput.addEventListener('change', function handleFileSelect(e) {
-                const files = e.target.files;
-                if (files && files.length > 0) {
-                    // Create a copy of the FileList as an array
-                    const fileArray = Array.from(files);
-                    // Reset input BEFORE processing to avoid any state issues
-                    fileInput.value = '';
-                    // Process files
-                    handleFiles(fileArray);
+            // Handle file selection
+            fileInput.addEventListener('change', (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length > 0) {
+                    handleFiles(files);
                 }
+                // Reset after a delay to allow re-selection
+                setTimeout(() => { fileInput.value = ''; }, 100);
             });
         }
 
+        function updateFileStatusUI(fileName, success) {
+            const fileItem = document.querySelector(`.file-status-item[data-file="${fileName}"]`);
+            if (fileItem) {
+                const container = fileItem.querySelector('div');
+                const fileIcon = fileItem.querySelector('.file-icon');
+                const checkIcon = fileItem.querySelector('.check-icon');
+                const fileNameEl = fileItem.querySelector('.file-name');
+                
+                if (success) {
+                    container.classList.remove('border-gray-200', 'bg-white');
+                    container.classList.add('border-green-400', 'bg-green-50');
+                    fileIcon.classList.remove('text-gray-300');
+                    fileIcon.classList.add('text-green-500');
+                    checkIcon.classList.remove('text-gray-200');
+                    checkIcon.classList.add('text-green-500');
+                    fileNameEl.classList.remove('text-gray-400');
+                    fileNameEl.classList.add('text-green-700');
+                } else {
+                    container.classList.remove('border-gray-200', 'bg-white');
+                    container.classList.add('border-red-400', 'bg-red-50');
+                    fileIcon.classList.remove('text-gray-300');
+                    fileIcon.classList.add('text-red-500');
+                    checkIcon.classList.remove('fa-check-circle', 'text-gray-200');
+                    checkIcon.classList.add('fa-times-circle', 'text-red-500');
+                    fileNameEl.classList.remove('text-gray-400');
+                    fileNameEl.classList.add('text-red-700');
+                }
+            }
+        }
+
+        function updateProgressBar() {
+            const progressBar = document.getElementById('progressBar');
+            const fileCountBadge = document.getElementById('fileCountBadge');
+            const uploadMessage = document.getElementById('uploadMessage');
+            
+            const loadedCount = loadedFiles.size;
+            const percentage = Math.round((loadedCount / totalRequiredFiles) * 100);
+            
+            progressBar.style.width = `${percentage}%`;
+            fileCountBadge.textContent = `${loadedCount} / ${totalRequiredFiles} loaded`;
+            
+            if (loadedCount === 0) {
+                fileCountBadge.classList.remove('bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
+                fileCountBadge.classList.add('bg-gray-200', 'text-gray-600');
+            } else if (loadedCount < totalRequiredFiles) {
+                fileCountBadge.classList.remove('bg-gray-200', 'text-gray-600', 'bg-green-100', 'text-green-700');
+                fileCountBadge.classList.add('bg-yellow-100', 'text-yellow-700');
+                
+                // Show which files are missing
+                const missingFiles = requiredFiles.filter(f => !loadedFiles.has(f));
+                uploadMessage.innerHTML = `<i class="fas fa-exclamation-triangle mr-1 text-yellow-500"></i>Missing ${missingFiles.length} file(s): ${missingFiles.slice(0, 3).join(', ')}${missingFiles.length > 3 ? '...' : ''}`;
+                uploadMessage.classList.remove('text-gray-500', 'text-green-600');
+                uploadMessage.classList.add('text-yellow-600');
+            } else {
+                fileCountBadge.classList.remove('bg-gray-200', 'text-gray-600', 'bg-yellow-100', 'text-yellow-700');
+                fileCountBadge.classList.add('bg-green-100', 'text-green-700');
+                uploadMessage.innerHTML = `<i class="fas fa-check-circle mr-1 text-green-500"></i>All files loaded! Starting browser...`;
+                uploadMessage.classList.remove('text-gray-500', 'text-yellow-600');
+                uploadMessage.classList.add('text-green-600');
+            }
+        }
+
         async function handleFiles(files) {
-            const progress = document.getElementById('uploadProgress');
-            const status = document.getElementById('uploadStatus');
-            progress.classList.remove('hidden');
-            status.innerHTML = '';
+            const uploadMessage = document.getElementById('uploadMessage');
+            
+            let newFilesCount = 0;
+            let skippedFilesCount = 0;
 
             for (const file of files) {
                 const fileName = file.name.toLowerCase();
+                
+                // Check if this is a required file
+                if (!requiredFiles.includes(fileName)) {
+                    continue; // Skip non-required files silently
+                }
+                
+                // Check if file is already loaded
+                if (loadedFiles.has(fileName)) {
+                    skippedFilesCount++;
+                    continue; // Skip already loaded files
+                }
+                
                 try {
                     const content = await readFileContent(file);
                     parseFile(fileName, content);
                     loadedFiles.add(fileName);
-                    addStatus(status, fileName, true);
+                    updateFileStatusUI(fileName, true);
+                    newFilesCount++;
                 } catch (error) {
-                    addStatus(status, fileName, false, error.message);
+                    updateFileStatusUI(fileName, false);
                 }
+                
+                // Update progress after each file
+                updateProgressBar();
+                
+                // Small delay for visual effect
+                await new Promise(resolve => setTimeout(resolve, 150));
             }
 
-            progress.classList.add('hidden');
+            // Show message about skipped files
+            if (skippedFilesCount > 0 && newFilesCount === 0) {
+                uploadMessage.innerHTML = `<i class="fas fa-info-circle mr-1 text-blue-500"></i>${skippedFilesCount} file(s) already loaded. Add the remaining files.`;
+                uploadMessage.classList.remove('text-gray-500', 'text-green-600', 'text-yellow-600');
+                uploadMessage.classList.add('text-blue-600');
+                
+                // Reset message after a few seconds
+                setTimeout(() => updateProgressBar(), 3000);
+            }
 
-            // Check if we have enough data to display
-            if (medDRA.soc.size > 0) {
+            // Check if all required files are loaded
+            if (loadedFiles.size >= totalRequiredFiles) {
+                // Brief delay before showing browser
+                await new Promise(resolve => setTimeout(resolve, 800));
                 showBrowser();
             }
         }
@@ -1127,6 +1291,33 @@
                 document.getElementById('uploadSection').classList.remove('hidden');
                 document.getElementById('uploadStatus').innerHTML = '';
                 document.getElementById('versionBadge').classList.add('hidden');
+                
+                // Reset file status grid
+                document.querySelectorAll('.file-status-item').forEach(item => {
+                    const container = item.querySelector('div');
+                    const fileIcon = item.querySelector('.file-icon');
+                    const checkIcon = item.querySelector('.check-icon');
+                    const fileNameEl = item.querySelector('.file-name');
+                    
+                    container.classList.remove('border-green-400', 'bg-green-50', 'border-red-400', 'bg-red-50');
+                    container.classList.add('border-gray-200', 'bg-white');
+                    fileIcon.classList.remove('text-green-500', 'text-red-500');
+                    fileIcon.classList.add('text-gray-300');
+                    checkIcon.classList.remove('text-green-500', 'text-red-500', 'fa-times-circle');
+                    checkIcon.classList.add('text-gray-200', 'fa-check-circle');
+                    fileNameEl.classList.remove('text-green-700', 'text-red-700');
+                    fileNameEl.classList.add('text-gray-400');
+                });
+                
+                // Reset progress bar and message
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('fileCountBadge').textContent = '0 / 9 loaded';
+                document.getElementById('fileCountBadge').classList.remove('bg-green-100', 'text-green-700', 'bg-yellow-100', 'text-yellow-700');
+                document.getElementById('fileCountBadge').classList.add('bg-gray-200', 'text-gray-600');
+                const uploadMessage = document.getElementById('uploadMessage');
+                uploadMessage.innerHTML = '<i class="fas fa-info-circle mr-1"></i>Drop files above to begin loading';
+                uploadMessage.classList.remove('text-green-600', 'text-yellow-600', 'text-blue-600');
+                uploadMessage.classList.add('text-gray-500');
             }
         }
     </script>
